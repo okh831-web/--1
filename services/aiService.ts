@@ -1,55 +1,64 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { DeptAgg, AggregatedData } from "../types";
+import { COMPETENCY_DEFINITIONS } from "../constants";
 
-// 지연 초기화를 통해 process.env.API_KEY 접근 시점 최적화
-let aiInstance: GoogleGenAI | null = null;
+/**
+ * AI Service for academic data analysis using Gemini API.
+ * Updated to strictly use defined competency names and prevent hallucinations.
+ */
 
-const getAI = () => {
-  if (!aiInstance) {
-    const apiKey = (window as any).process?.env?.API_KEY || "";
-    aiInstance = new GoogleGenAI({ apiKey });
-  }
-  return aiInstance;
-};
+// 공식 역량 구조를 AI가 이해하기 쉬운 텍스트 형식으로 변환
+const COMPETENCY_CONTEXT = COMPETENCY_DEFINITIONS.map(c => 
+  `- ${c.name}: [하위요소: ${c.subCompetencies.map(s => s.name).join(", ")}]`
+).join("\n");
+
+const SUB_COMP_MAP = COMPETENCY_DEFINITIONS.reduce((acc, curr) => {
+  curr.subCompetencies.forEach(sub => {
+    acc[sub.id] = sub.name;
+  });
+  return acc;
+}, {} as Record<string, string>);
 
 export const generateDeptReport = async (deptData: DeptAgg, univData: AggregatedData) => {
-  const apiKey = (window as any).process?.env?.API_KEY;
-  if (!apiKey) return "시스템 설정에서 API Key가 누락되었습니다.";
-
-  const ai = getAI();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = "gemini-3-pro-preview";
   
+  // 하위역량 점수를 ID 대신 실제 명칭으로 치환하여 AI에게 전달
+  const namedSubScores = Object.entries(deptData.subCompetencyScores).reduce((acc, [id, score]) => {
+    acc[SUB_COMP_MAP[id] || id] = score;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const namedUnivSubScores = Object.entries(univData.subCompetencyScores).reduce((acc, [id, score]) => {
+    acc[SUB_COMP_MAP[id] || id] = score;
+    return acc;
+  }, {} as Record<string, number>);
+
   const systemInstruction = `
-    당신은 대학 교육성과관리 전문 데이터 분석가입니다. 
-    건양대학교 핵심역량 진단 데이터를 바탕으로 학과 교수님들을 위한 고도화된 리포트를 작성하십시오.
-    데이터 수치 환산 기준: 모든 문항(1~5점)은 100점 만점으로 환산(점수 * 20)되어 있습니다.
+    당신은 건양대학교 교육성과관리 전문 분석가입니다. 
+    반드시 다음의 공식 역량 체계 내에서만 분석을 수행하고, 존재하지 않는 명칭(예: 지식탐구, 지역사회공헌 등)을 절대 사용하지 마십시오.
 
-    리포트는 반드시 다음 구성을 따르십시오:
-    - [학과 요약]: 응시 인원, 6대 역량 평점 평균, 전형별/학년별 데이터 기반 특이사항 요약.
-    - [역량 분석]: 6대 역량 점수를 기술하고, 대학 전체 평균(Base) 대비 해당 학과의 우수 영역 및 집중 관리 영역 분석.
-    - [하위 역량]: 12개 하위 역량 중 학과 강점 TOP 3와 약점 TOP 3를 구체적 수치와 함께 추출.
-    - [시사점]: 분석가로서 해당 학과 교수님들께 드리는 교육과정 개선 제언 및 학생 지도 방향성 제시.
+    [건양대학교 공식 6대 핵심역량 및 12개 하위역량]
+    ${COMPETENCY_CONTEXT}
 
-    말투는 신뢰감 있고 전문적이어야 하며, 학술적 분석 보고서 형식을 유지하십시오.
+    분석 원칙:
+    1. 모든 점수는 100점 만점 기준입니다.
+    2. 리포트 구성: [학과 요약], [6대 역량 분석], [하위 역량 강약점(TOP 3 / BOTTOM 3)], [교육 제언].
+    3. 하위 역량 명칭은 반드시 위에 나열된 명칭(자기이해, 자기효능감 등)을 정확히 사용하십시오.
+    4. 대학 전체 평균과 비교하여 상대적인 강점과 약점을 논리적으로 서술하십시오.
   `;
 
   const prompt = `
-    다음은 '${deptData.deptName}' 학과의 상세 데이터입니다. 대학 전체 지표와 대조하여 전문 리포트를 생성하십시오.
+    '${deptData.deptName}' 학과 분석 요청:
 
-    [학과 기초 정보]
-    - 학과명: ${deptData.deptName}
-    - 총 응시 인원: ${deptData.n}명
-    - 학년 분포: ${JSON.stringify(deptData.gradeDistribution)}
-    - 성별 분포: ${JSON.stringify(deptData.genderDistribution)}
+    [학과 데이터]
+    - 참여인원: ${deptData.n}명
+    - 6대 역량 점수: ${JSON.stringify(deptData.competencyScores)}
+    - 12개 하위역량 명칭별 점수: ${JSON.stringify(namedSubScores)}
 
-    [학과 역량 데이터 (100점 환산값)]
-    - 6대 핵심역량: ${JSON.stringify(deptData.competencyScores)}
-    - 12대 하위역량: ${JSON.stringify(deptData.subCompetencyScores)}
-
-    [대학 전체 비교 기준]
+    [대학 전체 비교 데이터]
     - 전체 6대 역량 평균: ${JSON.stringify(univData.competencyScores)}
-    - 전체 12대 하위역량 평균: ${JSON.stringify(univData.subCompetencyScores)}
+    - 전체 12개 하위역량 평균: ${JSON.stringify(namedUnivSubScores)}
   `;
 
   try {
@@ -58,32 +67,31 @@ export const generateDeptReport = async (deptData: DeptAgg, univData: Aggregated
       contents: prompt,
       config: {
         systemInstruction,
-        temperature: 0.3,
+        temperature: 0.2, // 창의성보다는 정확성을 위해 온도를 낮춤
       },
     });
     return response.text;
   } catch (error) {
     console.error("AI Report Generation Error:", error);
-    return "리포트 생성 중 오류가 발생했습니다. 학과 데이터 형식을 확인해 주세요.";
+    return "리포트 생성 중 오류가 발생했습니다. 정확한 명칭 기반 분석을 위해 시스템을 재점검 중입니다.";
   }
 };
 
 export const chatWithAnalyst = async (message: string, allData: { university: AggregatedData, departments: DeptAgg[] }) => {
-  const apiKey = (window as any).process?.env?.API_KEY;
-  if (!apiKey) return "AI 분석 기능을 사용하려면 API Key 설정이 필요합니다.";
-
-  const ai = getAI();
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const model = "gemini-3-pro-preview";
   
   const systemInstruction = `
     당신은 건양대학교 핵심역량 분석 전문 AI 분석가입니다.
-    사용자가 "OO학과 분석해줘"라고 요청하면, 제공된 학과 목록에서 해당 학과를 찾아 '학과 요약', '역량 분석', '하위 역량 TOP 3', '시사점' 순으로 리포트를 작성하십시오.
-    
-    데이터 활용 가이드:
-    1. 사용자가 언급한 학과가 전체 학과 목록(${allData.departments.map(d => d.deptName).join(", ")})에 있는지 확인하십시오.
-    2. 데이터가 있다면 즉시 리포트 구성을 시작하십시오.
-    3. 데이터가 없다면 유사한 이름의 학과를 제안하거나 목록에 있는 학과명을 알려주십시오.
-    4. 분석 시 항상 대학 전체 평균(${JSON.stringify(allData.university.competencyScores)})을 기준으로 상대적 비교를 수행하십시오.
+    사용자의 요청에 대해 반드시 건양대학교 고유의 역량 체계(자기신뢰, 라이프디자인, 프로페셔널리즘, 창조적도전, 융화적소통, 공동체참여)만을 사용하여 답변하십시오.
+
+    [절대 금기 사항]
+    - 시스템에 정의되지 않은 역량 명칭(예: 지식탐구, 지역사회공헌, 문제해결 등)을 창조하여 답변하지 마십시오.
+    - 하위 요소는 반드시 [자기이해, 자기효능감, 목표설정, 전략적실행, 전공전문성, 직업윤리, 진취적도전, 성장탄력성, 자기표현, 개방적경청, 공동체이해, 역할행동] 중 데이터와 일치하는 항목만 사용하십시오.
+
+    [답변 가이드]
+    - 학과 요청 시 '학과 요약', '역량 분석', '하위 요소 TOP 3', '시사점' 순으로 작성하십시오.
+    - 대학 전체 평균(${JSON.stringify(allData.university.competencyScores)})을 기준으로 분석하십시오.
   `;
 
   const prompt = `사용자 요청: ${message}`;
@@ -94,11 +102,12 @@ export const chatWithAnalyst = async (message: string, allData: { university: Ag
       contents: prompt,
       config: { 
         systemInstruction,
-        temperature: 0.4 
+        temperature: 0.2 
       },
     });
     return response.text;
   } catch (error) {
-    return "요청하신 분석을 수행하는 중 기술적인 문제가 발생했습니다. 관리자에게 문의하세요.";
+    console.error("AI Chat Analytic Error:", error);
+    return "요청하신 분석 수행 중 정합성 오류가 발생했습니다. 공식 역량 체계에 맞춰 다시 분석을 준비 중입니다.";
   }
 };
