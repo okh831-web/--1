@@ -1,17 +1,19 @@
 
 import React, { useState } from 'react';
-import { AppState } from '../types';
-import { processExcelFile } from '../services/dataService';
+import { AppState, PageView } from '../types';
+import { processExcelFile, downloadSampleExcel, exportToJson } from '../services/dataService';
 import { INITIAL_UNIVERSITY_DATA, INITIAL_DEPT_DATA, COMPETENCY_DEFINITIONS } from '../constants';
 
 interface AdminProps {
   state: AppState;
   onUpdateState: (newState: AppState) => void;
+  onNavigate: (page: PageView) => void;
 }
 
-const Admin: React.FC<AdminProps> = ({ state, onUpdateState }) => {
+const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedDeptName, setSelectedDeptName] = useState<string>('');
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -22,15 +24,22 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState }) => {
 
     try {
       const { university, departments } = await processExcelFile(file);
+      
+      // 상태 업데이트 (Deep Copy 보장)
       onUpdateState({
         ...state,
-        university,
-        departments,
+        university: { ...university },
+        departments: [...departments],
         lastUpdated: new Date().toISOString()
       });
-      alert('데이터 업로드 및 집계가 완료되었습니다.');
+      
+      alert(`데이터 분석 완료! ${departments.length}개 학과 데이터가 성공적으로 처리되었습니다.`);
+      
+      // 결과 확인을 위해 학과별 보기 허브로 이동
+      onNavigate('deptHub');
     } catch (err: any) {
       setError(err.message);
+      console.error(err);
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -45,105 +54,158 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState }) => {
         mapping: COMPETENCY_DEFINITIONS,
         lastUpdated: new Date().toISOString()
       });
-      alert('초기화되었습니다.');
+      alert('데이터가 초기화되었습니다.');
     }
   };
 
-  const exportData = () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `KYU_Competency_Data_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
+  const handleExportUniv = () => {
+    exportToJson(state.university, "KYU_University_Total");
+  };
+
+  const handleExportAllDepts = () => {
+    exportToJson(state.departments, "KYU_All_Departments");
+  };
+
+  const handleExportSelectedDept = () => {
+    if (!selectedDeptName) {
+      alert('내보낼 학과를 선택해주세요.');
+      return;
+    }
+    const dept = state.departments.find(d => d.deptName === selectedDeptName);
+    if (dept) {
+      exportToJson(dept, `KYU_Dept_${selectedDeptName}`);
+    }
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8 animate-fadeIn">
       <div className="border-b pb-6 border-slate-200">
-        <h1 className="text-3xl font-black text-slate-800">관리자 대시보드</h1>
-        <p className="text-slate-500 mt-1">시스템 데이터 관리 및 매핑 규칙 설정을 수행합니다.</p>
+        <h1 className="text-3xl font-black text-slate-800">관리자 데이터 센터</h1>
+        <p className="text-slate-500 mt-1">엑셀 파일을 업로드하여 학과별 역량 점수를 자동으로 분석하고 업데이트합니다.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <span className="w-2 h-6 bg-blue-600 rounded-full"></span>
+            1. 양식 다운로드
+          </h2>
+          <p className="text-sm text-slate-500 leading-relaxed">
+            업로드할 파일의 컬럼명이 정확해야 분석이 가능합니다. 아래 양식을 참고하여 파일을 구성해 주세요.
+          </p>
+          <button 
+            onClick={downloadSampleExcel}
+            className="w-full py-4 border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+          >
+            📂 엑셀 양식 다운로드 (.xlsx)
+          </button>
+        </section>
+
+        <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <span className="w-2 h-6 bg-green-600 rounded-full"></span>
+            2. 데이터 분석 및 업로드
+          </h2>
+          <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center">
+            <input 
+              type="file" 
+              accept=".xlsx, .xls, .csv"
+              onChange={handleFileUpload}
+              disabled={isUploading}
+              className="hidden"
+              id="excel-upload"
+            />
+            <label 
+              htmlFor="excel-upload"
+              className={`w-full py-4 bg-[#003478] text-white rounded-2xl font-bold cursor-pointer transition-all flex items-center justify-center gap-2 ${isUploading ? 'opacity-50 animate-pulse' : 'hover:bg-blue-800 hover:shadow-lg'}`}
+            >
+              {isUploading ? '데이터 정밀 분석 중...' : '📤 분석할 파일 선택'}
+            </label>
+            {error && (
+              <div className="mt-4 p-3 bg-rose-50 text-rose-600 text-xs rounded-lg border border-rose-100">
+                ⚠️ {error}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
 
       <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded flex items-center justify-center font-bold">1</div>
-          <h2 className="text-xl font-bold">데이터 업로드</h2>
-        </div>
-        
-        <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center space-y-4">
-          <p className="text-slate-500 text-sm">
-            Konyang_AIStudio_Upload_2026.xlsx 형식의 파일을 업로드하세요.<br/>
-            (필수 컬럼: dept, gender, grade, q1 ~ q60)
-          </p>
-          <input 
-            type="file" 
-            accept=".xlsx, .xls"
-            onChange={handleFileUpload}
-            disabled={isUploading}
-            className="hidden"
-            id="excel-upload"
-          />
-          <label 
-            htmlFor="excel-upload"
-            className={`inline-block px-10 py-3 bg-[#003478] text-white rounded-xl font-bold cursor-pointer transition-all ${isUploading ? 'opacity-50' : 'hover:translate-y-[-2px] hover:shadow-lg'}`}
-          >
-            {isUploading ? '처리 중...' : '엑셀 파일 선택'}
-          </label>
-          
-          {error && (
-            <div className="bg-rose-50 text-rose-500 p-4 rounded-xl text-sm font-medium">
-              ❌ {error}
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <span className="w-2 h-6 bg-amber-500 rounded-full"></span>
+          3. 결과 데이터 내보내기
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-3">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">통합 보고서</h4>
+            <div className="flex flex-col gap-2">
+              <button 
+                onClick={handleExportUniv}
+                className="w-full py-3 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition-all text-sm border border-slate-200"
+              >
+                📊 대학 전체 요약 (JSON)
+              </button>
+              <button 
+                onClick={handleExportAllDepts}
+                className="w-full py-3 bg-slate-50 text-slate-700 font-bold rounded-xl hover:bg-slate-100 transition-all text-sm border border-slate-200"
+              >
+                📁 모든 학과 통합 데이터 (JSON)
+              </button>
             </div>
-          )}
+          </div>
+          <div className="space-y-3">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">학과별 상세 추출</h4>
+            <div className="flex flex-col gap-2">
+              <select 
+                value={selectedDeptName}
+                onChange={(e) => setSelectedDeptName(e.target.value)}
+                className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 text-sm outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">-- 내보낼 학과 선택 --</option>
+                {state.departments.map(d => (
+                  <option key={d.deptName} value={d.deptName}>{d.deptName}</option>
+                ))}
+              </select>
+              <button 
+                onClick={handleExportSelectedDept}
+                disabled={!selectedDeptName}
+                className="w-full py-3 bg-[#009640] text-white font-bold rounded-xl hover:bg-green-700 disabled:opacity-50 transition-all text-sm shadow-md"
+              >
+                🎯 선택 학과 데이터 다운로드
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-green-100 text-green-600 rounded flex items-center justify-center font-bold">2</div>
-          <h2 className="text-xl font-bold">매핑 규칙 확인 (Read-only)</h2>
-        </div>
-        <div className="overflow-x-auto border border-slate-100 rounded-xl">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-slate-50 text-slate-500">
-              <tr>
-                <th className="p-4">핵심역량</th>
-                <th className="p-4">하위역량</th>
-                <th className="p-4">문항 매핑</th>
-              </tr>
-            </thead>
-            <tbody>
-              {COMPETENCY_DEFINITIONS.map(comp => (
-                <React.Fragment key={comp.id}>
-                  {comp.subCompetencies.map((sub, idx) => (
-                    <tr key={sub.id} className="border-t border-slate-50">
-                      {idx === 0 && <td className="p-4 font-bold bg-slate-50/50" rowSpan={2}>{comp.name}</td>}
-                      <td className="p-4">{sub.name}</td>
-                      <td className="p-4 font-mono text-xs text-slate-400">q{sub.questions[0]} ~ q{sub.questions[sub.questions.length-1]}</td>
-                    </tr>
-                  ))}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+      <section className="bg-slate-900 text-white p-8 rounded-3xl shadow-xl space-y-6">
+        <h2 className="text-xl font-bold">시스템 데이터 현황</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white/10 p-5 rounded-2xl border border-white/10">
+            <p className="text-xs text-white/50 font-bold mb-1">데이터 신뢰도</p>
+            <p className={`text-xl font-black ${state.university.isSample ? 'text-amber-400' : 'text-green-400'}`}>
+              {state.university.isSample ? '임시 (샘플 모드)' : '확정 (실데이터 모드)'}
+            </p>
+          </div>
+          <div className="bg-white/10 p-5 rounded-2xl border border-white/10">
+            <p className="text-xs text-white/50 font-bold mb-1">분석 완료 학과</p>
+            <p className="text-2xl font-black">{state.departments.length}개 학과</p>
+          </div>
+          <div className="bg-white/10 p-5 rounded-2xl border border-white/10">
+            <p className="text-xs text-white/50 font-bold mb-1">최종 동기화 시각</p>
+            <p className="text-xl font-black">{state.university.updatedAt}</p>
+          </div>
         </div>
       </section>
 
-      <section className="bg-slate-50 p-8 rounded-3xl border border-slate-200 flex flex-wrap gap-4">
-        <button 
-          onClick={exportData}
-          className="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-all"
-        >
-          데이터 JSON 내보내기
-        </button>
+      <div className="flex justify-center pt-10">
         <button 
           onClick={resetToSample}
-          className="px-6 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-xl transition-all"
+          className="px-6 py-2 text-slate-400 hover:text-rose-500 text-xs font-bold border border-slate-200 rounded-full transition-all"
         >
-          데이터 초기화 (샘플로 복원)
+          ⚙️ 초기 데이터로 시스템 리셋
         </button>
-      </section>
+      </div>
     </div>
   );
 };

@@ -14,29 +14,63 @@ const NoData = () => (
   </div>
 );
 
+/**
+ * 6대 핵심역량 레이더 차트
+ * 항목 이름 옆에 (점수)가 자동으로 표시되도록 데이터 매핑 로직 개선
+ */
 export const CompetencyRadar: React.FC<{ data: Record<string, number>; compareData?: Record<string, number>; name?: string; compareName?: string }> = ({ data, compareData, name = "대상", compareName = "비교" }) => {
-  const chartData = COMPETENCY_DEFINITIONS.map(comp => ({
-    subject: comp.name,
-    A: isNaN(data[comp.id]) ? 0 : data[comp.id],
-    B: compareData ? (isNaN(compareData[comp.id]) ? 0 : compareData[comp.id]) : undefined,
-    fullMark: 100,
-  }));
+  const chartData = COMPETENCY_DEFINITIONS.map(comp => {
+    const scoreA = isNaN(data[comp.id]) ? 0 : data[comp.id];
+    return {
+      // 항목 이름 옆에 점수를 직접 결합하여 표시
+      subject: `${comp.name} (${scoreA.toFixed(1)})`,
+      originalName: comp.name,
+      A: scoreA,
+      B: compareData ? (isNaN(compareData[comp.id]) ? 0 : compareData[comp.id]) : undefined,
+      fullMark: 100,
+    };
+  });
 
   if (chartData.length === 0) return <NoData />;
 
   return (
-    <div className="w-full h-[350px]">
+    <div className="w-full h-[400px]">
       <ResponsiveContainer width="100%" height="100%">
-        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
-          <PolarGrid />
-          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12 }} />
-          <PolarRadiusAxis angle={30} domain={[0, 100]} />
-          <Radar name={name} dataKey="A" stroke={UNIVERSITY_COLORS.navy} fill={UNIVERSITY_COLORS.navy} fillOpacity={0.6} />
+        <RadarChart cx="50%" cy="50%" outerRadius="75%" data={chartData}>
+          <PolarGrid stroke="#e2e8f0" />
+          <PolarAngleAxis 
+            dataKey="subject" 
+            tick={{ fontSize: 13, fontWeight: 700, fill: '#475569' }} 
+          />
+          <PolarRadiusAxis 
+            angle={30} 
+            domain={[0, 100]} 
+            tick={{ fontSize: 10, fill: '#94a3b8' }} 
+            axisLine={false}
+          />
+          <Radar 
+            name={name} 
+            dataKey="A" 
+            stroke={UNIVERSITY_COLORS.navy} 
+            fill={UNIVERSITY_COLORS.navy} 
+            fillOpacity={0.5} 
+            strokeWidth={3}
+          />
           {compareData && (
-            <Radar name={compareName} dataKey="B" stroke={UNIVERSITY_COLORS.green} fill={UNIVERSITY_COLORS.green} fillOpacity={0.4} />
+            <Radar 
+              name={compareName} 
+              dataKey="B" 
+              stroke={UNIVERSITY_COLORS.green} 
+              fill={UNIVERSITY_COLORS.green} 
+              fillOpacity={0.3} 
+              strokeWidth={2}
+              strokeDasharray="4 4"
+            />
           )}
-          <Tooltip />
-          {compareData && <Legend />}
+          <Tooltip 
+            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+          />
+          {compareData && <Legend wrapperStyle={{ paddingTop: '20px' }} />}
         </RadarChart>
       </ResponsiveContainer>
     </div>
@@ -75,7 +109,6 @@ export const SubCompetencyBar: React.FC<{ data: Record<string, number> }> = ({ d
 
 export const DistributionChart: React.FC<{ data: Record<string|number, number>, title: string }> = ({ data, title }) => {
   const entries = Object.entries(data);
-  // Fix: Explicitly cast unknown val to number for isNaN check
   const chartData = entries.map(([key, val]) => ({ name: key, value: isNaN(val as number) ? 0 : (val as number) }));
 
   if (chartData.length === 0) return <NoData />;

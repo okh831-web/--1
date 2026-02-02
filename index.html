@@ -8,14 +8,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@100;400;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Pretendard', sans-serif; }
+        body { font-family: 'Pretendard', sans-serif; margin: 0; padding: 0; }
         @media print {
             .no-print { display: none !important; }
             .print-break { page-break-after: always; }
         }
-        /* 로딩 중 표시를 위한 간단한 스타일 */
         #root:empty::before {
-            content: '애플리케이션을 불러오는 중입니다...';
+            content: '시스템을 초기화하고 있습니다...';
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,30 +23,28 @@
             font-size: 1rem;
         }
     </style>
-    <!-- 환경변수 오류 방지를 위한 Shim -->
     <script>
-        if (typeof window.process === 'undefined') {
-            window.process = { env: {} };
-        }
+        // 전역 환경변수 객체 안전하게 초기화
+        window.process = window.process || { env: {} };
     </script>
     <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.0.0",
-    "react-dom": "https://esm.sh/react-dom@^19.0.0",
-    "react-dom/client": "https://esm.sh/react-dom@^19.0.0/client",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "xlsx": "https://esm.sh/xlsx@^0.18.5",
-    "@google/genai": "https://esm.sh/@google/genai@^1.39.0",
-    "react/": "https://esm.sh/react@^19.2.4/",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react/jsx-runtime": "https://esm.sh/react@19.0.0/jsx-runtime",
+    "recharts": "https://esm.sh/recharts@3.7.0?external=react,react-dom",
+    "xlsx": "https://esm.sh/xlsx@0.18.5",
+    "@google/genai": "https://esm.sh/@google/genai@1.39.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
 </script>
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
-    <!-- 엔트리 스크립트는 반드시 상대경로로 로드 -->
-    <script type="module" src="./index.tsx"></script>
+    <script type="module" src="index.tsx"></script>
 </body>
 </html>

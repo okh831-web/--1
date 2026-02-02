@@ -7,14 +7,14 @@ import DeptHub from './pages/DeptHub';
 import DeptDetail from './pages/DeptDetail';
 import Community from './pages/Community';
 import Admin from './pages/Admin';
-import AIAnalyst from './pages/AIAnalyst'; // 신설
+import AIAnalyst from './pages/AIAnalyst';
 import { AppState, PageView, DeptAgg } from './types';
 import { COMPETENCY_DEFINITIONS, INITIAL_UNIVERSITY_DATA, INITIAL_DEPT_DATA } from './constants';
 
 const LOCAL_STORAGE_KEY = 'KYU_CORE_COMP_2026_DATA';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<PageView | 'aiAnalyst'>('home');
+  const [currentPage, setCurrentPage] = useState<PageView>('home');
   const [selectedDept, setSelectedDept] = useState<DeptAgg | null>(null);
   
   const [state, setState] = useState<AppState>(() => {
@@ -38,7 +38,7 @@ const App: React.FC = () => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
-  const handleNavigate = (page: PageView | 'aiAnalyst') => {
+  const handleNavigate = (page: PageView) => {
     setCurrentPage(page);
     setSelectedDept(null);
     window.scrollTo(0, 0);
@@ -53,9 +53,9 @@ const App: React.FC = () => {
   const renderPage = () => {
     switch (currentPage) {
       case 'home':
-        return <Home onNavigate={handleNavigate as any} />;
+        return <Home onNavigate={handleNavigate} />;
       case 'dashboard':
-        return <Dashboard state={state} onNavigate={handleNavigate as any} />;
+        return <Dashboard state={state} onNavigate={handleNavigate} />;
       case 'deptHub':
         return <DeptHub state={state} onSelectDept={handleSelectDept} />;
       case 'deptDetail':
@@ -71,14 +71,14 @@ const App: React.FC = () => {
       case 'community':
         return <Community />;
       case 'admin':
-        return <Admin state={state} onUpdateState={setState} />;
+        return <Admin state={state} onUpdateState={setState} onNavigate={handleNavigate} />;
       default:
-        return <Home onNavigate={handleNavigate as any} />;
+        return <Home onNavigate={handleNavigate} />;
     }
   };
 
   return (
-    <Layout currentPage={currentPage as any} onNavigate={handleNavigate as any}>
+    <Layout currentPage={currentPage} onNavigate={handleNavigate}>
       {renderPage()}
     </Layout>
   );
