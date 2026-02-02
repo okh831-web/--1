@@ -2,9 +2,20 @@
 import { GoogleGenAI } from "@google/genai";
 import { DeptAgg, AggregatedData } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// API Key가 없을 경우를 대비한 안전한 인스턴스 생성 함수
+const getAIInstance = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("Gemini API Key가 설정되지 않았습니다. AI 기능을 사용할 수 없습니다.");
+  }
+  return new GoogleGenAI({ apiKey: apiKey || 'dummy-key' });
+};
+
+const ai = getAIInstance();
 
 export const generateDeptReport = async (deptData: DeptAgg, univData: AggregatedData) => {
+  if (!process.env.API_KEY) return "시스템 설정에서 API Key가 누락되었습니다.";
+
   const model = "gemini-3-pro-preview";
   
   const systemInstruction = `
@@ -45,7 +56,7 @@ export const generateDeptReport = async (deptData: DeptAgg, univData: Aggregated
       contents: prompt,
       config: {
         systemInstruction,
-        temperature: 0.3, // 분석의 객관성을 위해 낮은 온도로 설정
+        temperature: 0.3,
       },
     });
     return response.text;
@@ -56,6 +67,8 @@ export const generateDeptReport = async (deptData: DeptAgg, univData: Aggregated
 };
 
 export const chatWithAnalyst = async (message: string, allData: { university: AggregatedData, departments: DeptAgg[] }) => {
+  if (!process.env.API_KEY) return "AI 분석 기능을 사용하려면 API Key 설정이 필요합니다.";
+
   const model = "gemini-3-pro-preview";
   
   const systemInstruction = `
