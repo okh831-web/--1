@@ -13,8 +13,9 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }) =>
   const navItems = [
     { id: 'home', label: '홈' },
     { id: 'dashboard', label: '전체 대시보드' },
+    { id: 'categoryHub', label: '계열별 보기' },
     { id: 'deptHub', label: '학과별 보기' },
-    { id: 'aiAnalyst', label: 'AI 분석가' }, // 신설
+    { id: 'aiAnalyst', label: 'AI 분석가' },
     { id: 'community', label: '커뮤니티' },
     { id: 'admin', label: '관리자' },
   ];
@@ -34,7 +35,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate }) =>
             </div>
           </div>
           
-          <nav className="flex gap-1 md:gap-4 mt-2 md:mt-0 overflow-x-auto">
+          <nav className="flex gap-1 md:gap-4 mt-2 md:mt-0 overflow-x-auto scrollbar-hide">
             {navItems.map((item) => (
               <button
                 key={item.id}

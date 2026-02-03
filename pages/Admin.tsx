@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { AppState, PageView } from '../types';
-import { processExcelFile, downloadSampleExcel, exportToJson } from '../services/dataService';
+import { processExcelFile, downloadSampleExcel, exportToJson, aggregateCategories } from '../services/dataService';
 import { INITIAL_UNIVERSITY_DATA, INITIAL_DEPT_DATA, COMPETENCY_DEFINITIONS } from '../constants';
 
 interface AdminProps {
@@ -23,17 +23,18 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
     setError(null);
 
     try {
-      const { university, departments } = await processExcelFile(file);
+      const { university, departments, categories } = await processExcelFile(file);
       
       onUpdateState({
         ...state,
         university: { ...university },
         departments: [...departments],
+        categories: [...categories],
         lastUpdated: new Date().toISOString()
       });
       
       alert(`데이터 분석 완료! 총 ${departments.length}개 학과, ${university.n.toLocaleString()}명의 데이터가 성공적으로 처리되었습니다.`);
-      onNavigate('deptHub');
+      onNavigate('categoryHub');
     } catch (err: any) {
       setError(err.message);
       console.error(err);
@@ -45,9 +46,13 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
 
   const resetToSample = () => {
     if (confirm('모든 데이터를 삭제하고 샘플 데이터로 복구하시겠습니까?')) {
+      const initialDepts = INITIAL_DEPT_DATA;
+      const initialCategories = aggregateCategories(initialDepts);
+
       onUpdateState({
         university: INITIAL_UNIVERSITY_DATA,
-        departments: INITIAL_DEPT_DATA,
+        departments: initialDepts,
+        categories: initialCategories,
         mapping: COMPETENCY_DEFINITIONS,
         lastUpdated: new Date().toISOString()
       });
@@ -78,7 +83,7 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
     <div className="max-w-5xl mx-auto space-y-8 animate-fadeIn">
       <div className="border-b pb-6 border-slate-200">
         <h1 className="text-3xl font-black text-slate-800">관리자 데이터 센터</h1>
-        <p className="text-slate-500 mt-1">엑셀 파일을 업로드하여 학과별 역량 점수를 자동으로 분석하고 업데이트합니다.</p>
+        <p className="text-slate-500 mt-1">Excel 또는 CSV 파일을 업로드하여 학과별 역량 점수를 자동으로 분석하고 업데이트합니다.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -88,13 +93,13 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
             1. 양식 다운로드
           </h2>
           <p className="text-sm text-slate-500 leading-relaxed">
-            업로드할 파일의 컬럼명이 정확해야 분석이 가능합니다. 아래 양식을 참고하여 파일을 구성해 주세요.
+            업로드할 파일의 컬럼명이 정확해야 분석이 가능합니다. 아래 양식(Excel/CSV 호환)을 참고하여 파일을 구성해 주세요.
           </p>
           <button 
             onClick={downloadSampleExcel}
             className="w-full py-4 border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
           >
-            📂 엑셀 양식 다운로드 (.xlsx)
+            📂 양식 다운로드 (.xlsx / .csv 호환)
           </button>
         </section>
 
@@ -116,13 +121,16 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
               htmlFor="excel-upload"
               className={`w-full py-4 bg-[#003478] text-white rounded-2xl font-bold cursor-pointer transition-all flex items-center justify-center gap-2 ${isUploading ? 'opacity-50 animate-pulse' : 'hover:bg-blue-800 hover:shadow-lg'}`}
             >
-              {isUploading ? '데이터 정밀 분석 중...' : '📤 분석할 파일 선택'}
+              {isUploading ? '데이터 정밀 분석 중...' : '📤 분석할 파일 선택 (.xlsx, .csv)'}
             </label>
             {error && (
               <div className="mt-4 p-3 bg-rose-50 text-rose-600 text-xs rounded-lg border border-rose-100">
                 ⚠️ {error}
               </div>
             )}
+            <p className="mt-4 text-[11px] text-slate-400 font-medium">
+              * 엑셀 파일은 물론, 쉼표로 구분된 CSV 파일도 지원합니다.
+            </p>
           </div>
         </section>
       </div>

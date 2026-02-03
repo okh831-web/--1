@@ -19,7 +19,6 @@ export interface AggregatedData {
   competencyScores: Record<string, number>;
   subCompetencyScores: Record<string, number>;
   genderDistribution: { male: number; female: number; unknown: number };
-  // 성별별 6대 역량 평균 점수 추가
   genderCompetencyScores?: {
     male: Record<string, number>;
     female: Record<string, number>;
@@ -29,13 +28,20 @@ export interface AggregatedData {
 
 export interface DeptAgg extends AggregatedData {
   deptName: string;
+  categoryName?: string;
+}
+
+export interface CategoryAgg extends AggregatedData {
+  categoryName: string;
+  deptCount: number;
 }
 
 export interface AppState {
   university: AggregatedData;
   departments: DeptAgg[];
+  categories: CategoryAgg[];
   mapping: CompetencyMapping[];
   lastUpdated: string;
 }
 
-export type PageView = 'home' | 'dashboard' | 'deptHub' | 'deptDetail' | 'community' | 'admin' | 'aiAnalyst';
+export type PageView = 'home' | 'dashboard' | 'categoryHub' | 'deptHub' | 'deptDetail' | 'community' | 'admin' | 'aiAnalyst';
