@@ -30,31 +30,36 @@ export const exportToJson = (data: any, fileName: string) => {
 };
 
 /**
- * 엑셀 헤더 명칭을 시스템 표준 키로 변환 (Fuzzy Matching)
+ * 엑셀 헤더 명칭을 시스템 표준 키로 변환 (패턴 매칭 강화)
  */
 const getNormalizedKey = (rawKey: string): string => {
   if (!rawKey) return '';
   const cleanKey = String(rawKey).replace(/^\uFEFF/, '').replace(/\s+/g, '').toLowerCase();
   
-  if (cleanKey.includes('학과') || cleanKey === 'dept' || cleanKey.includes('부서')) return '학과';
-  if (cleanKey.includes('성별') || cleanKey === 'gender' || cleanKey === 'sex' || cleanKey.includes('남/여')) return '성별';
-  if (cleanKey.includes('학년') || cleanKey === 'grade' || cleanKey.includes('연차')) return '학년';
+  // 학과 인식
+  if (cleanKey.includes('학과') || cleanKey.includes('전공') || cleanKey.includes('dept') || cleanKey.includes('부서')) return '학과';
   
-  // 문항 번호 추출 (문항1, q1, Q1, 1번문항 등 대응)
-  const match = cleanKey.match(/(?:문항|q|question|v|item)?(\d+)/i);
+  // 성별 인식 (성별, gender, sex, 남/여, 구분 등 포함 시)
+  if (cleanKey.includes('성별') || cleanKey.includes('gender') || cleanKey === 'sex' || cleanKey.includes('남/여') || (cleanKey.includes('구분') && !cleanKey.includes('학과'))) return '성별';
+  
+  // 학년 인식
+  if (cleanKey.includes('학년') || cleanKey.includes('grade') || cleanKey.includes('연차') || cleanKey.includes('학급')) return '학년';
+  
+  // 문항 번호 추출
+  const match = cleanKey.match(/(?:문항|q|question|v|item|no|n)?(\d+)/i);
   if (match) return `문항${match[1]}`;
   
   return cleanKey;
 };
 
 /**
- * 성별 값을 남/여/미분류로 정확히 판별
+ * 성별 값을 남/여/미분류로 정확히 판별 (포괄적 판별 로직)
  */
 const parseGender = (val: any): 'male' | 'female' | 'unknown' => {
   if (val === undefined || val === null) return 'unknown';
   const s = String(val).trim().toLowerCase();
-  if (['1', '남', '남성', 'm', 'male', 'man'].includes(s)) return 'male';
-  if (['2', '여', '여성', 'f', 'female', 'woman'].includes(s)) return 'female';
+  if (['1', '남', '남성', 'm', 'male', 'man', 'boy'].includes(s)) return 'male';
+  if (['2', '여', '여성', 'f', 'female', 'woman', 'girl'].includes(s)) return 'female';
   return 'unknown';
 };
 
@@ -71,7 +76,6 @@ export const processExcelFile = async (file: File): Promise<{ university: Aggreg
 
         if (rawRows.length === 0) throw new Error('엑셀 파일에 데이터가 없습니다.');
 
-        // 모든 로우의 키를 정규화하여 데이터 정합성 확보
         const normalizedRows = rawRows.map(row => {
           const newRow: any = {};
           for (const key in row) {
@@ -99,7 +103,6 @@ export const processExcelFile = async (file: File): Promise<{ university: Aggreg
             female: {} 
           };
 
-          // 초기화 (누락 방지)
           COMPETENCY_DEFINITIONS.forEach(c => {
             compSums[c.id] = 0;
             genderCompSums.male[c.id] = 0;
@@ -123,7 +126,6 @@ export const processExcelFile = async (file: File): Promise<{ university: Aggreg
                 if (valRaw !== undefined && valRaw !== null) {
                   const val = parseFloat(String(valRaw).replace(/,/g, '.'));
                   if (!isNaN(val)) {
-                    // 5점 척도 자동 감지 및 100점 환산
                     const score = (val <= 5 && val > 0) ? val * 20 : val;
                     compTotalInRow += score;
                     compCountInRow++;
@@ -168,7 +170,6 @@ export const processExcelFile = async (file: File): Promise<{ university: Aggreg
           COMPETENCY_DEFINITIONS.forEach(comp => {
             competencyScores[comp.id] = parseFloat((compSums[comp.id] / n).toFixed(2)) || 0;
             
-            // 성별 평균 계산 (분모가 0인 경우 0점 처리하여 객체 구조 유지)
             genderCompetencyScores.male[comp.id] = genderDist.male > 0 
               ? parseFloat((genderCompSums.male[comp.id] / genderDist.male).toFixed(2)) 
               : 0;

@@ -96,22 +96,28 @@ export const GenderScoreCompareBar: React.FC<{ maleScores: Record<string, number
   }));
 
   return (
-    <div className="w-full h-[350px]">
-      <h4 className="text-center font-bold text-slate-500 mb-4 text-xs tracking-widest uppercase">성별 역량 격차 분석</h4>
+    <div className="w-full h-[400px]">
+      <h4 className="text-center font-bold text-slate-500 mb-6 text-xs tracking-widest uppercase">성별 역량 격차 분석</h4>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <BarChart data={chartData} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-          <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} axisLine={false} />
-          <YAxis domain={[0, 100]} hide />
+          <XAxis 
+            dataKey="name" 
+            tick={{ fontSize: 10, fontWeight: 700 }} 
+            axisLine={false} 
+            interval={0} 
+            height={50}
+          />
+          <YAxis domain={[0, 105]} hide />
           <Tooltip 
             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
           />
-          <Legend verticalAlign="top" align="right" />
-          <Bar dataKey="남성" fill="#1e40af" radius={[4, 4, 0, 0]} barSize={20}>
-            <LabelList dataKey="남성" position="top" style={{ fontSize: '10px', fontWeight: '800' }} />
+          <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: '20px' }} />
+          <Bar dataKey="남성" fill="#1e40af" radius={[4, 4, 0, 0]} barSize={16}>
+            <LabelList dataKey="남성" position="top" style={{ fontSize: '9px', fontWeight: '800' }} offset={10} />
           </Bar>
-          <Bar dataKey="여성" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20}>
-            <LabelList dataKey="여성" position="top" style={{ fontSize: '10px', fontWeight: '800' }} />
+          <Bar dataKey="여성" fill="#10b981" radius={[4, 4, 0, 0]} barSize={16}>
+            <LabelList dataKey="여성" position="top" style={{ fontSize: '9px', fontWeight: '800' }} offset={10} />
           </Bar>
         </BarChart>
       </ResponsiveContainer>

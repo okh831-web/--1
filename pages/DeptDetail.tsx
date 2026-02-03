@@ -22,6 +22,26 @@ const DeptDetail: React.FC<DeptDetailProps> = ({ dept, university, onBack }) => 
     setIsGenerating(false);
   };
 
+  // 최고 역량 찾기
+  const sortedCompEntries = (Object.entries(dept.competencyScores) as [string, number][]).sort((a, b) => b[1] - a[1]);
+  const topCompId = sortedCompEntries[0][0];
+  const topCompScore = sortedCompEntries[0][1];
+  const topCompName = COMPETENCY_DEFINITIONS.find(c => c.id === topCompId)?.name || '알 수 없음';
+
+  // 성별 격차 계산 (안전 처리)
+  const calculateGenderGap = () => {
+    if (!dept.genderCompetencyScores || (dept.genderDistribution.male === 0 && dept.genderDistribution.female === 0)) {
+      return "0.00";
+    }
+    const maleAvg = (Object.values(dept.genderCompetencyScores.male) as number[]).reduce((a, b) => a + b, 0) / 6;
+    const femaleAvg = (Object.values(dept.genderCompetencyScores.female) as number[]).reduce((a, b) => a + b, 0) / 6;
+    
+    // 한쪽 성별이 없는 경우 비교가 불가능하므로 0 처리
+    if (dept.genderDistribution.male === 0 || dept.genderDistribution.female === 0) return "0.00";
+    
+    return Math.abs(maleAvg - femaleAvg).toFixed(2);
+  };
+
   return (
     <div className="space-y-8 animate-fadeIn">
       <div className="no-print flex items-center gap-4 mb-2">
@@ -88,27 +108,28 @@ const DeptDetail: React.FC<DeptDetailProps> = ({ dept, university, onBack }) => 
             )}
           </div>
           <DistributionChart data={dept.gradeDistribution} title="학년별 분포" />
-          <div className="bg-slate-50 p-6 rounded-2xl flex flex-col justify-start gap-6">
+          <div className="bg-slate-50 p-6 rounded-2xl flex flex-col justify-start gap-6 h-fit">
             <h4 className="font-bold text-slate-700 uppercase text-xs tracking-widest">학과 분석 요약</h4>
-            <div className="space-y-4 text-sm">
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-slate-500">최고 역량</span>
-                <span className="font-black text-[#009640]">
-                  {COMPETENCY_DEFINITIONS.find(c => c.id === (Object.entries(dept.competencyScores) as [string, number][]).sort((a,b) => b[1] - a[1])[0][0])?.name}
+            <div className="space-y-6 text-sm">
+              <div className="flex justify-between items-center border-b pb-3">
+                <span className="text-slate-500 font-medium">최고 역량</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-black text-[#009640] text-lg">{topCompName}</span>
+                  <span className="bg-[#009640]/10 text-[#009640] px-2 py-0.5 rounded-lg text-xs font-black">{topCompScore.toFixed(1)}점</span>
+                </div>
+              </div>
+              <div className="flex justify-between items-center border-b pb-3">
+                <span className="text-slate-500 font-medium">성별 점수 격차</span>
+                <span className="font-black text-blue-600 text-lg">
+                   {calculateGenderGap()}점
                 </span>
               </div>
-              <div className="flex justify-between border-b pb-2">
-                <span className="text-slate-500">성별 점수 격차</span>
-                <span className="font-black text-blue-600">
-                   {dept.genderCompetencyScores ? 
-                     Math.abs(
-                       (Object.values(dept.genderCompetencyScores.male) as number[]).reduce((a,b)=>a+b,0)/6 - 
-                       (Object.values(dept.genderCompetencyScores.female) as number[]).reduce((a,b)=>a+b,0)/6
-                     ).toFixed(2) : '0'}점
-                </span>
+              <div className="flex justify-between items-center border-b pb-3">
+                <span className="text-slate-500 font-medium">분석 인원 (N)</span>
+                <span className="font-black text-slate-800 text-lg">{dept.n}명</span>
               </div>
-              <div className="text-xs text-slate-400 leading-relaxed italic">
-                * 성별 점수 격차는 6대 핵심역량 평균의 절댓값 차이입니다.
+              <div className="text-xs text-slate-400 leading-relaxed italic mt-4 bg-white/50 p-3 rounded-xl">
+                * 성별 점수 격차는 6대 핵심역량 평균의 절댓값 차이입니다. 특정 성별 데이터가 없을 경우 0.00점으로 표시됩니다.
               </div>
             </div>
           </div>
