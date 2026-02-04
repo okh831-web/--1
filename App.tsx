@@ -9,11 +9,11 @@ import DeptDetail from './pages/DeptDetail';
 import Community from './pages/Community';
 import Admin from './pages/Admin';
 import AIAnalyst from './pages/AIAnalyst';
-import { AppState, PageView, DeptAgg } from './types';
+import { AppState, PageView, DeptAgg, AggregatedData } from './types';
 import { COMPETENCY_DEFINITIONS, INITIAL_UNIVERSITY_DATA, INITIAL_DEPT_DATA } from './constants';
 import { aggregateCategories, detectCategory } from './services/dataService';
 
-const LOCAL_STORAGE_KEY = 'KYU_CORE_COMP_2026_DATA_V3';
+const LOCAL_STORAGE_KEY = 'KYU_CORE_COMP_2026_DATA_V4';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<PageView>('home');
@@ -39,8 +39,26 @@ const App: React.FC = () => {
     // 샘플 데이터를 바탕으로 실제 계열별 집계 수행 (정합성 보장)
     const initialCategories = aggregateCategories(initialDepts);
 
+    // 대학 전체 데이터도 학과 합산으로 재계산 (인원수 불일치 해결)
+    const totalN = initialDepts.reduce((s, d) => s + d.n, 0);
+    const universityAgg: AggregatedData = {
+      ...INITIAL_UNIVERSITY_DATA,
+      n: totalN,
+      genderDistribution: {
+        male: initialDepts.reduce((s, d) => s + (d.genderDistribution?.male || 0), 0),
+        female: initialDepts.reduce((s, d) => s + (d.genderDistribution?.female || 0), 0),
+        unknown: initialDepts.reduce((s, d) => s + (d.genderDistribution?.unknown || 0), 0),
+      },
+      gradeDistribution: {
+        1: initialDepts.reduce((s, d) => s + (d.gradeDistribution?.[1] || 0), 0),
+        2: initialDepts.reduce((s, d) => s + (d.gradeDistribution?.[2] || 0), 0),
+        3: initialDepts.reduce((s, d) => s + (d.gradeDistribution?.[3] || 0), 0),
+        4: initialDepts.reduce((s, d) => s + (d.gradeDistribution?.[4] || 0), 0),
+      }
+    };
+
     return {
-      university: INITIAL_UNIVERSITY_DATA,
+      university: universityAgg,
       departments: initialDepts,
       categories: initialCategories,
       mapping: COMPETENCY_DEFINITIONS,

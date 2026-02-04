@@ -83,7 +83,7 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
     <div className="max-w-5xl mx-auto space-y-8 animate-fadeIn">
       <div className="border-b pb-6 border-slate-200">
         <h1 className="text-3xl font-black text-slate-800">관리자 데이터 센터</h1>
-        <p className="text-slate-500 mt-1">Excel 또는 CSV 파일을 업로드하여 학과별 역량 점수를 자동으로 분석하고 업데이트합니다.</p>
+        <p className="text-slate-500 mt-1">Excel, CSV 또는 ZIP 파일을 업로드하여 데이터를 일괄 분석하고 업데이트합니다.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -111,7 +111,7 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
           <div className="border-2 border-dashed border-slate-200 rounded-2xl p-6 text-center">
             <input 
               type="file" 
-              accept=".xlsx, .xls, .csv"
+              accept=".xlsx, .xls, .csv, .zip"
               onChange={handleFileUpload}
               disabled={isUploading}
               className="hidden"
@@ -121,7 +121,7 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
               htmlFor="excel-upload"
               className={`w-full py-4 bg-[#003478] text-white rounded-2xl font-bold cursor-pointer transition-all flex items-center justify-center gap-2 ${isUploading ? 'opacity-50 animate-pulse' : 'hover:bg-blue-800 hover:shadow-lg'}`}
             >
-              {isUploading ? '데이터 정밀 분석 중...' : '📤 분석할 파일 선택 (.xlsx, .csv)'}
+              {isUploading ? '데이터 정밀 통합 분석 중...' : '📤 분석할 파일 선택 (.xlsx, .csv, .zip)'}
             </label>
             {error && (
               <div className="mt-4 p-3 bg-rose-50 text-rose-600 text-xs rounded-lg border border-rose-100">
@@ -129,7 +129,7 @@ const Admin: React.FC<AdminProps> = ({ state, onUpdateState, onNavigate }) => {
               </div>
             )}
             <p className="mt-4 text-[11px] text-slate-400 font-medium">
-              * 엑셀 파일은 물론, 쉼표로 구분된 CSV 파일도 지원합니다.
+              * 개별 엑셀 파일은 물론, 여러 파일이 담긴 <b>ZIP 압축 파일</b> 업로드도 지원합니다.
             </p>
           </div>
         </section>

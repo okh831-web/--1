@@ -87,20 +87,19 @@ export const INITIAL_UNIVERSITY_DATA: AggregatedData = {
     female: { selfConfidence: 78.1, lifeDesign: 79.5, professionalism: 76.7, creativeChallenge: 73.2, convergenceComm: 81.2, communityParticipation: 78.7 }
   },
   gradeDistribution: { 1: 1540, 2: 1320, 3: 1210, 4: 1170 },
+  admissionDistribution: { '학생부교과': 3200, '학생부종합': 1500, '수능(정시)': 540 },
+  admissionCompetencyScores: {
+    '학생부교과': { selfConfidence: 77.1, lifeDesign: 78.2, professionalism: 76.1, creativeChallenge: 73.5, convergenceComm: 79.8, communityParticipation: 78.1 },
+    '학생부종합': { selfConfidence: 78.5, lifeDesign: 79.8, professionalism: 77.2, creativeChallenge: 75.1, convergenceComm: 81.5, communityParticipation: 79.2 },
+    '수능(정시)': { selfConfidence: 75.2, lifeDesign: 76.1, professionalism: 74.5, creativeChallenge: 72.8, convergenceComm: 78.1, communityParticipation: 76.5 }
+  }
 };
 
 const createDept = (name: string, n: number, bonus: Partial<Record<string, number>>): DeptAgg => {
   const compScores = { ...INITIAL_UNIVERSITY_DATA.competencyScores };
-  const subCompScores = { ...INITIAL_UNIVERSITY_DATA.subCompetencyScores };
-
   Object.entries(bonus).forEach(([key, val]) => {
     if (compScores[key] !== undefined) compScores[key] = parseFloat((compScores[key] + (val || 0)).toFixed(1));
   });
-
-  const g1 = Math.floor(n * (0.25 + Math.random() * 0.1));
-  const g2 = Math.floor(n * (0.23 + Math.random() * 0.1));
-  const g3 = Math.floor(n * (0.22 + Math.random() * 0.1));
-  const g4 = n - (g1 + g2 + g3);
 
   const male = Math.floor(n * (0.4 + Math.random() * 0.2));
   const unknown = Math.floor(n * 0.01);
@@ -112,13 +111,23 @@ const createDept = (name: string, n: number, bonus: Partial<Record<string, numbe
     n,
     isSample: true,
     competencyScores: compScores,
-    subCompetencyScores: subCompScores,
     genderDistribution: { male, female, unknown },
     genderCompetencyScores: {
         male: Object.fromEntries(Object.entries(compScores).map(([k,v]) => [k, v - 1])),
         female: Object.fromEntries(Object.entries(compScores).map(([k,v]) => [k, v + 1]))
     },
-    gradeDistribution: { 1: g1, 2: g2, 3: g3, 4: g4 },
+    gradeDistribution: { 
+      1: Math.floor(n * 0.25), 
+      2: Math.floor(n * 0.25), 
+      3: Math.floor(n * 0.25), 
+      4: n - Math.floor(n * 0.75) 
+    },
+    admissionDistribution: { '학생부교과': Math.floor(n * 0.6), '학생부종합': Math.floor(n * 0.3), '수능(정시)': n - Math.floor(n * 0.9) },
+    admissionCompetencyScores: {
+      '학생부교과': Object.fromEntries(Object.entries(compScores).map(([k,v]) => [k, v - 0.5])),
+      '학생부종합': Object.fromEntries(Object.entries(compScores).map(([k,v]) => [k, v + 1.2])),
+      '수능(정시)': Object.fromEntries(Object.entries(compScores).map(([k,v]) => [k, v - 1.8]))
+    }
   };
 };
 
@@ -126,13 +135,7 @@ export const INITIAL_DEPT_DATA: DeptAgg[] = [
   createDept('의예과', 115, { selfConfidence: 5.2, professionalism: 4.1 }),
   createDept('의학과', 98, { professionalism: 6.5, lifeDesign: 2.1 }),
   createDept('간호학과', 245, { professionalism: 7.2, convergenceComm: 3.5 }),
-  createDept('임상병리학과', 120, { professionalism: 3.2 }),
-  createDept('방사선학과', 110, { professionalism: 2.8 }),
-  createDept('치위생학과', 85, { professionalism: 4.5, convergenceComm: 2.1 }),
-  createDept('물리치료학과', 95, { professionalism: 5.1, convergenceComm: 1.5 }),
-  createDept('작업치료학과', 70, { professionalism: 4.2, communityParticipation: 3.0 }),
-  createDept('디지털콘텐츠학과', 130, { creativeChallenge: 8.5, lifeDesign: 2.0 }),
-  createDept('인공지능학과', 105, { creativeChallenge: 10.5, lifeDesign: 3.2 }),
-  createDept('경영학부', 280, { lifeDesign: 6.2, convergenceComm: 4.5 }),
-  createDept('군사학과', 120, { selfConfidence: 9.5, communityParticipation: 8.5 }),
+  createDept('디지털콘텐츠학과', 130, { creativeChallenge: 8.5 }),
+  createDept('인공지능학과', 105, { creativeChallenge: 10.5 }),
+  createDept('군사학과', 120, { selfConfidence: 9.5 }),
 ];

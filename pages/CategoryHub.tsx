@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { AppState, CategoryAgg, DeptAgg } from '../types';
 import { COMPETENCY_DEFINITIONS } from '../constants';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
-import { DistributionChart, GenderPieChart } from '../components/Charts';
+import { DistributionChart, GenderPieChart, GenderScoreCompareBar } from '../components/Charts';
 
 interface CategoryHubProps {
   state: AppState;
@@ -13,7 +13,7 @@ interface CategoryHubProps {
 const CategoryHub: React.FC<CategoryHubProps> = ({ state, onSelectDept }) => {
   const [activeCategory, setActiveCategory] = useState<CategoryAgg | null>(null);
 
-  // 더미 데이터 제거하고 state.categories를 직접 사용
+  // state.categories를 직접 사용하여 정합성 유지
   const displayCategories = state.categories;
 
   // 차트 데이터 구성
@@ -58,7 +58,7 @@ const CategoryHub: React.FC<CategoryHubProps> = ({ state, onSelectDept }) => {
         </div>
       </section>
 
-      {/* 2. 계열별 데이터 테이블 (이미지 구현) */}
+      {/* 2. 계열별 데이터 테이블 */}
       <section className="overflow-hidden rounded-[24px] border border-slate-200 shadow-xl bg-white">
         <table className="w-full text-center border-collapse">
           <thead>
@@ -114,8 +114,14 @@ const CategoryHub: React.FC<CategoryHubProps> = ({ state, onSelectDept }) => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
+            <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 space-y-6">
               <GenderPieChart data={activeCategory.genderDistribution} />
+              {activeCategory.genderCompetencyScores && (
+                <GenderScoreCompareBar 
+                  maleScores={activeCategory.genderCompetencyScores.male} 
+                  femaleScores={activeCategory.genderCompetencyScores.female} 
+                />
+              )}
             </div>
             <div className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100">
               <DistributionChart data={activeCategory.gradeDistribution} title="학년별 분포" />

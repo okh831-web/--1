@@ -24,6 +24,8 @@ export interface AggregatedData {
     female: Record<string, number>;
   };
   gradeDistribution: Record<number, number>;
+  admissionDistribution?: Record<string, number>;
+  admissionCompetencyScores?: Record<string, Record<string, number>>;
 }
 
 export interface DeptAgg extends AggregatedData {
